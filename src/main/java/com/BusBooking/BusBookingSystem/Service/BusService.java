@@ -1,7 +1,9 @@
 package com.BusBooking.BusBookingSystem.Service;
 
 
+import com.BusBooking.BusBookingSystem.Model.Booking;
 import com.BusBooking.BusBookingSystem.Model.Bus;
+import com.BusBooking.BusBookingSystem.Repository.BookingRepository;
 import com.BusBooking.BusBookingSystem.Repository.BusRepository;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -54,6 +56,10 @@ public class BusService {
         return busRepository.findBySourceIgnoreCaseAndDestinationIgnoreCase(
                 source, destination);
     }
+
+
+
+
 
 
 

@@ -11,9 +11,6 @@ import java.util.List;
 
 public interface BusRepository extends JpaRepository<Bus,Long> {
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select b from Bus b where b.id = :id")
-    java.util.Optional<Bus> findByIdForUpdate(@Param("id") Long id);
 
     List<Bus> findBySourceIgnoreCaseAndDestinationIgnoreCase(
             String source, String destination);

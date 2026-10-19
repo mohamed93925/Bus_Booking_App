@@ -6,53 +6,88 @@ import com.BusBooking.BusBookingSystem.Model.User;
 import com.BusBooking.BusBookingSystem.Repository.BookingRepository;
 import com.BusBooking.BusBookingSystem.Repository.BusRepository;
 import com.BusBooking.BusBookingSystem.Repository.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 public class BookingService {
+
     private final BookingRepository bookingRepository;
     private final BusRepository busRepository;
     private final UserRepository userRepository;
 
-    public BookingService(BookingRepository bookingRepository, BusRepository busRepository, UserRepository userRepository) {
-        this.bookingRepository = bookingRepository;
+    public BookingService(BookingRepository bookingRepository,BusRepository busRepository,UserRepository userRepository){
+        this.bookingRepository= bookingRepository;
         this.busRepository = busRepository;
         this.userRepository = userRepository;
     }
 
-    @Transactional
-    public Booking book(Long userId, Long busId, int seats) {
-        if (seats < 1) throw new IllegalArgumentException("At least one seat must be booked");
+@Transactional
+public Booking BookTicket(Long userId, Long busId, int seatBooked){
+
+        if(seatBooked<=0){
+            throw new IllegalArgumentException("Seat booked must be greater than zero");
+        }
+
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        Bus bus = busRepository.findByIdForUpdate(busId)
-                .orElseThrow(() -> new IllegalArgumentException("Bus not found"));
-        if (bus.getAvailableSeats() < seats) throw new IllegalArgumentException("Insufficient seats available");
-        bus.setAvailableSeats(bus.getAvailableSeats() - seats);
+                .orElseThrow(()-> new IllegalArgumentException("User not Found"));
+
+        Bus bus = busRepository.findById(busId)
+                .orElseThrow(()-> new IllegalArgumentException("Bus not Found"));
+
+        if(bus.getAvailableSeats() < seatBooked){
+            throw new IllegalArgumentException("Not Enough seats Available");
+
+        }
+
+        bus.setAvailableSeats(bus.getAvailableSeats() - seatBooked);
+        busRepository.save(bus);
+
         Booking booking = new Booking();
         booking.setUser(user);
         booking.setBus(bus);
-        booking.setSeats(seats);
+        booking.setSeatsBooked(seatBooked);
+        booking.setBookingTime(LocalDateTime.now());
+        booking.setStatus("Confirmed");
+
         return bookingRepository.save(booking);
+
+}
+
+@Transactional
+public Booking cancelTicket(Long BookingId){
+
+    Booking booking = bookingRepository.findById(BookingId)
+            .orElseThrow(() -> new IllegalArgumentException("Booking not Found"));
+
+    if("Cancelled".equals(booking.getStatus())){
+        throw new IllegalArgumentException("Already cancelled");
+
     }
 
-    public List<Booking> getUserBookings(Long userId) {
-        if (!userRepository.existsById(userId)) throw new IllegalArgumentException("User not found");
-        return bookingRepository.findByUserId(userId);
+    Bus bus = booking.getBus();
+    bus.setAvailableSeats(bus.getAvailableSeats() + booking.getSeatsBooked());
+
+    busRepository.save(bus);
+
+    booking.setStatus("Cancelled");
+
+    return bookingRepository.save(booking);
+
+
+}
+
+public List<Booking> getAllBookings(){
+        return bookingRepository.findAll();
+
+}
+    public List<Booking> getBookingsByUserID(Long UserId){
+        return bookingRepository.findUserById(UserId);
     }
 
-    @Transactional
-    public Booking cancel(Long bookingId) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
-        if ("CANCELLED".equals(booking.getStatus())) throw new IllegalArgumentException("Booking is already cancelled");
-        Bus bus = busRepository.findByIdForUpdate(booking.getBus().getId())
-                .orElseThrow(() -> new IllegalArgumentException("Bus not found"));
-        bus.setAvailableSeats(Math.min(bus.getTotalSeats(), bus.getAvailableSeats() + booking.getSeats()));
-        booking.setStatus("CANCELLED");
-        return booking;
-    }
+
+
 }
